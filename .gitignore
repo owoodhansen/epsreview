@@ -6,7 +6,7 @@ myscopusapi.py
 /venv/*
 __pycache__
 .gitattributes
-/data/manualdata/*.csv
+/data/manualdata/*
 /data/*.csv
 /data/bertopic/topicmodels/
 /data/bertopic/embeds/
