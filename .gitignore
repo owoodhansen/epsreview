@@ -2,7 +2,6 @@
 
 *.png
 /sankey/*.png
-sankey/*.png
 
 .vscode
 *myscopusapi.py
