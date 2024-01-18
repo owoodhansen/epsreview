@@ -1,5 +1,9 @@
 ############### Python gitignores
 
+*.png
+/sankey/*.png
+sankey/*.png
+
 .vscode
 *myscopusapi.py
 myscopusapi.py

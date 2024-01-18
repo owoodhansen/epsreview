@@ -1,18 +1,15 @@
-## Oskar, EPS
+## Oskar, EPS, scopuscall
 
 ### Script 1: SCOPUS SEARCH  ############################
 # I) Send search query to scopus for literature
 # II) Get subject areas for each document (another Scopus API)
-# III) Performs initial filtering
 ##################################### 
 
 import pandas as pd
-from pybliometrics.scopus import ScopusSearch
-from scopusquery import EPSquery
-import string
+import pybliometrics.scopus as scopus 
+from scopusquery import EPSq
 import html
-
-## SCOPUS FIELD: SUBJAREA(SOCI)
+import requests
 
 #################
 pd.set_option('display.max_columns', None)
@@ -24,10 +21,15 @@ pd.set_option('display.max_colwidth', 150)
 
 ################ GET results
 
-s = ScopusSearch(EPSquery, download=True, subscriber=True, refresh=True, verbose=True) # set download=True for fast, but result size only
+from pybliometrics.scopus.utils import config
+print(config['Proxy']['ftp'])  # Show keys
+
+
+with requests.Session() as s: 
+    s = scopus.ScopusSearch(EPSq, download=True, subscriber=True, refresh=True, verbose=True) # set download=True for fast, but result size only
+    
 s.get_results_size()
 # must be on icta network/vpn to DL more than 5K results. 
-# Also requires SCOPUS API Key
 
 raw = pd.DataFrame(pd.DataFrame(s.results))
 raw.head()
@@ -58,9 +60,10 @@ df = raw[wantedfields]
 len(df)
 
 # save
-df.to_csv("data/0rawscopus.csv", encoding='utf-8-sig') # "-sig" adds BOM bc. Excel
-df = pd.read_csv("data/0rawscopus.csv")
 len(df)
+df.to_csv("data/0raw_nofilter_v1.csv", encoding='utf-8-sig') # "-sig" adds BOM bc. Excel
+df = pd.read_csv("data/0raw_nofilter_v1.csv")
+
 
 ############# APIs for subject areas
 
@@ -116,93 +119,11 @@ all_subject_data = eid_subjects + retry_unable_eids
 #lost one. EID could not be found: "2-s2.0-0032010175"
 
 df_subj = pd.DataFrame(all_subject_data, columns=['eid', 'pubname', 'subjabbr', 'subjarea','subjcode'])
-
-df_subj.to_csv("data/0scopus_subjarea_data.csv", encoding='utf-8-sig') # "-sig" adds BOM bc. Excel
-df_subj = pd.read_csv("data/0scopus_subjarea_data.csv")
 len(df)
+df_subj.to_csv("data/0subjarea_data_nofilter.csv", encoding='utf-8-sig') # "-sig" adds BOM bc. Excel
+
+
 
 
 ############################################################
 
-################## Initial cleaning
-
-len(df)
-
-oldarts = df[df["pubyear"] <= 1985]
-len(oldarts) # if little number, don't remove
-
-df['date'] = pd.to_datetime(df['date'])
-toonew = df['date'] > pd.datetime(2023,4,30)
-sum(toonew)
-df = df[~toonew]
-
-len(df)
-
-no_jrnl = df.aggregationType != 'Journal' # ONLY ARTICLES, not books / conf papers
-sum(no_jrnl)
-df = df[~no_jrnl]
-len(df)
-
-
-df.aggregationType.value_counts() 
-df.subtype.value_counts() 
-
-doctypes = ~df.subtype.isin(["ar", "re"]) # only reviews and articles
-sum(doctypes)
-df = df[~doctypes]
-
-# remove doi duplicates
-dups = ((df['doi'].duplicated(keep=False)) & (df['doi'].isna() == False) & (df['subtype'].isin(['ar', 're'])))
-sum(dups)
-df = df[~dups]
-
-# check art_title duplicates after lowercase and removing punc 
-punctoremove = string.punctuation.replace("-", "")
-df['title_ed'] = [i.translate(str.maketrans('', '', punctoremove)) for i in df.title] # Also removes hyphen, and not only dash
-df['title_ed'] = [i.lower().strip().replace("  ", " ") for i in df.title_ed]
-dups_edtitle = df['title_ed'].duplicated(keep=False)
-sum(dups_edtitle) 
-df = df[~dups_edtitle]
-
-# removes reprints and three manually found doi duplicates 
-reprints = df[df['title_ed'].str.contains('reprint')]['doi']
-reprintdois = [str(x) for x in reprints]
-manremovals = df['doi'].isin(['10.1016/j.envsci.2013.08.001', '10.3763/cpol.2002.0216', '10.1080/15567030903330645']+reprintdois)
-sum(manremovals)
-df = df[~manremovals]
-len(df)
-
-res = df
-
-len(res)
-######## MERGE
-
-res = res.loc[:,'eid': ]
-df_subj.columns
-fulldat = pd.merge(res, df_subj, how='left', on='eid')
-
-len(fulldat)
-# some cleaning after merge
-fulldat = fulldat.drop_duplicates(subset=['title_ed'])
-fulldat['publicationName'] = [html.unescape(stryng) for stryng in fulldat['publicationName']]
-
-# Tjek at pubtitler er ens i API'er
-x = fulldat[~(fulldat.publicationName == fulldat.pubname)]
-x[["publicationName", 'pubname']]
-
-
-# rename some that differ
-fulldat.loc[fulldat["publicationName"] == "Environmental Change and Security Project report", 'pubname'] = "Environmental Change and Security Project report"
-fulldat['pubname'] = fulldat['pubname'].replace({"Journal of environmental management": "Journal of Environmental Management",
-                            "International journal of environmental research and public health": "International Journal of Environmental Research and Public Health",
-                            }) 
-# leave gaia as is
-fulldat.pubname.fillna(fulldat.publicationName, inplace=True)
-fulldat = fulldat.drop(['publicationName'], axis=1)
-
-fulldat.to_csv("data/1scopus_initfilters.csv",  encoding='utf-8-sig', index=False)
-
-len(fulldat)
-
-############## 
- 

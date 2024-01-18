@@ -25,7 +25,7 @@ import pickle
 embedmodel = 'all-MiniLM-L12-v2'
 
 #Load sentences & embeddings from disc
-with open(f'data/bertopic/embeds/embed_{embedmodel}_cleaned2023.pkl', "rb") as fIn:
+with open(f'data/bertopic/embeds/{embedmodel}_cleaned2023.pkl', "rb") as fIn:
     stored_data = pickle.load(fIn)
     stored_sentences = stored_data['sentences']
     stored_embeddings = stored_data['embeddings']
@@ -64,11 +64,11 @@ len(topic_model.get_topic_info())
 topic_model.get_topic_freq()
 
 # Save
-topic_model.save(f"data/bertopic/topicmodels/TM_cleaneddat_takunedited_{embedmodel}")
+topic_model.save(f"data/bertopic/topicmodels/{embedmodel}_cleaned2023")
 
 
 ########################### load saved model
-topic_model = BERTopic.load(f"data/bertopic/topicmodels/TM_cleaneddat_takunedited_{embedmodel}")
+topic_model = BERTopic.load(f"data/bertopic/topicmodels/q4_takunedit_{embedmodel}")
 
 ### Merge or reduce no of topics
 topic_model.reduce_topics(stored_sentences, nr_topics=25)
@@ -95,7 +95,7 @@ topicdata = topicfreq.append(topicswords)
 topicdata.T.to_clipboard()
 
 ## save topic model data
-topicdata.T.to_csv("data/2topicmodeldata.csv",  encoding='utf-8-sig')
+topicdata.T.to_csv("data/3topicdata.csv",  encoding='utf-8-sig')
 
 
 
@@ -134,8 +134,9 @@ fighiera.write_html(pathtoviz + "fig_hierachy.html")
 figdocmap.write_html(pathtoviz + "fig_docmap.html")
 
 
-# merge topics onto each article: 
-scopus = pd.read_csv("data/2cleaned.csv").loc[:,'eid':]
+# save each article and their topic: 
+scopus = pd.read_csv("data/1cleaned.csv").loc[:,'eid':]
+
 
 
 ################## add topic numbers and topic_words to docs
@@ -163,5 +164,5 @@ transfdscans = pd.merge(article_topics, mastereidscanned, how='left', on='eid')
 
 len(article_topics), len(transfdscans), len(mastereidscanned)
 
-transfdscans.to_csv("data/3cleaned_topicmodeltopics.csv",  encoding='utf-8-sig')
+transfdscans.to_csv("data/3cleaned_wtopics.csv",  encoding='utf-8-sig')
 

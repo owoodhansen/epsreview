@@ -1,14 +1,11 @@
-## Oskar, EPS
-
-### Script 3A: Topic modelling prep: make embeddings  ############################
-##################################### 
+###
 
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 # from transformers import AutoTokenizer, AutoModel # The Hugging face way
 import pickle
 
-scopus = pd.read_csv("data/2cleaned.csv").iloc[:,2:] # / ("data/0fulldat.csv")
+scopus = pd.read_csv("data/1cleaned_may.csv").iloc[:,2:] # /#("data/0fulldat.csv")
 len(scopus)
 scopus['authkeywords'] = scopus['authkeywords'].str.replace("|", ".").fillna("")
 TAK = scopus['title'] + '[SEP]' + scopus['authkeywords'] + '[SEP]' + scopus['description'] 
@@ -43,5 +40,5 @@ sentence_model.max_seq_length = 512
 embeddings = sentence_model.encode(docs, show_progress_bar=True)
 
 #Store sentences & embeddings on disc
-with open(f'data/bertopic/embeds/embed_{embeddingmodel}_cleaned2023.pkl', "wb") as fOut:
+with open(f'data/bertopic/embeds/{embeddingmodel}_cleaned2023.pkl', "wb") as fOut:
     pickle.dump({'sentences': docs, 'embeddings': embeddings}, fOut, protocol=pickle.HIGHEST_PROTOCOL)
